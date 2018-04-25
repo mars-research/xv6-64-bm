@@ -20,8 +20,8 @@ main(void)
   uartearlyinit();
   kinit1(end, P2V(4*1024*1024)); // phys page allocator
   kvmalloc();      // kernel page table
-  if (acpiinit()) // try to use acpi for machine info
-    mpinit();      // otherwise use bios MP tables
+  //if (acpiinit()) // try to use acpi for machine info
+  //  mpinit();      // otherwise use bios MP tables
   lapicinit();
   seginit();       // set up segments
   cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
@@ -37,7 +37,7 @@ main(void)
   ideinit();       // disk
   if(!ismp)
     timerinit();   // uniprocessor timer
-  startothers();   // start other processors
+  //startothers();   // start other processors
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();      // first user process
   // Finish setting up this processor in mpmain.
