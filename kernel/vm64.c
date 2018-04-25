@@ -130,8 +130,16 @@ pde_t*
 setupkvm(void)
 {
   pde_t *pml4 = (pde_t*) kalloc();
+  if(!pml4)
+    panic("pml4 kalloc failed");  
+
   pde_t *pdpt = (pde_t*) kalloc();
+  if(!pdpt)
+    panic("pdpt kalloc failed");  
+
   pde_t *pgdir = (pde_t*) kalloc();
+  if(!pgdir)
+    panic("pgdir kalloc failed");  
 
   memset(pml4, 0, PGSIZE);
   memset(pdpt, 0, PGSIZE);

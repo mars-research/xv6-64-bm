@@ -74,7 +74,7 @@ TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/d
 endif
 
 # If the makefile can't find QEMU, specify its path here
-#QEMU = 
+QEMU = /usr/local/bin/qemu-system-x86_64
 
 # Try to infer the correct QEMU
 ifndef QEMU
@@ -105,10 +105,10 @@ xv6.img: out/bootblock out/kernel.elf fs.img
 	dd if=out/bootblock of=xv6.img conv=notrunc
 	dd if=out/kernel.elf of=xv6.img seek=1 conv=notrunc
 
-xv6memfs.img: out/bootblock out/kernelmemfs.elf
+xv6memfs.img: out/bootblock out/kernel.elf
 	dd if=/dev/zero of=xv6memfs.img count=10000
 	dd if=out/bootblock of=xv6memfs.img conv=notrunc
-	dd if=out/kernelmemfs.elf of=xv6memfs.img seek=1 conv=notrunc
+	dd if=out/kernel.elf of=xv6memfs.img seek=1 conv=notrunc
 
 # kernel object files
 kobj/%.o: kernel/%.c
@@ -234,7 +234,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 	then echo "-gdb tcp::$(GDBPORT)"; \
 	else echo "-s -p $(GDBPORT)"; fi)
 ifndef CPUS
-CPUS := 2
+CPUS := 1
 endif
 QEMUOPTS = -net none -hdb fs.img xv6.img -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
@@ -242,7 +242,7 @@ qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
 qemu-memfs: xv6memfs.img
-	$(QEMU) xv6memfs.img -smp $(CPUS)
+	$(QEMU) -nographic -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
 qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)

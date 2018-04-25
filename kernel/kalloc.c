@@ -32,6 +32,8 @@ kinit1(void *vstart, void *vend)
 {
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
+  cprintf("Initialize kernel memory, vstart:%x, vend:%x\n", 
+    vstart, vend); 
   freerange(vstart, vend);
 }
 
@@ -91,6 +93,7 @@ kalloc(void)
     kmem.freelist = r->next;
   if(kmem.use_lock)
     release(&kmem.lock);
+  //cprintf("kalloc:%x\n", r); 
   return (char*)r;
 }
 
