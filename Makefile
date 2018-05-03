@@ -242,9 +242,11 @@ qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
 qemu-memfs: xv6memfs.img
-    $(QEMU) -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA) -cpu Broadwell -device isa-debug-exit,iobase=0xf4,iosize=0x04
+	$(QEMU) -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA) -cpu Broadwell -device isa-debug-exit,iobase=0xf4,iosize=0x04
+
 qemu-nox-memfs: xv6memfs.img
 	$(QEMU) -nographic -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA) -cpu Broadwell -device isa-debug-exit,iobase=0xf4,iosize=0x04
+
 qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
