@@ -7,6 +7,10 @@ struct proc;
 struct spinlock;
 struct stat;
 struct superblock;
+struct msg;
+
+#define unlikely(x) __builtin_expect(x, 0)
+#define likely(x) __builtin_expect(x, 1)
 
 // bio.c
 void            binit(void);
@@ -119,7 +123,9 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
-
+int             send(int,struct msg* );
+int             send_recv(int,struct msg* );
+int             recv(int,struct msg* );
 // swtch.S
 void            swtch(struct context**, struct context*);
 
@@ -183,6 +189,6 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
-
+extern pde_t *kpml4;
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

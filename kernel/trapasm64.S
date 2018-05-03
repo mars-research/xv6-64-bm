@@ -1,6 +1,26 @@
-
+#include "param.h"
   # vectors.S sends all traps here.
 .globl alltraps
+.globl syscall_entry
+.extern cpu
+.extern syscalls_fast
+.extern print_test
+.extern pgs
+.extern proc
+syscall_entry:
+  pushq %rbp
+  movq %rsp, %rbp
+  movq (proc), %rsp
+  movq 0x10(%rsp), %rsp
+  addq $KSTACKSIZE, %rsp
+  push %rcx
+  pushq %r11
+  callq *syscalls_fast(,%rax,8)
+  popq %r11
+  popq %rcx
+  movq %rbp, %rsp
+  popq %rbp  
+  sysretq
 alltraps:
   # Build trap frame.
   push %r15

@@ -33,8 +33,8 @@ extern int ncpu;
 // This is similar to how thread-local variables are implemented
 // in thread libraries such as Linux pthreads.
 #if X64
-extern __thread struct cpu *cpu;
-extern __thread struct proc *proc;
+extern  struct cpu *cpu;
+extern  struct proc *proc;
 #else
 extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
 extern struct proc *proc asm("%gs:4");     // cpus[cpunum()].proc
@@ -72,8 +72,10 @@ struct context {
 };
 #endif
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
-
+enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE, IPC_DISPATCH };
+struct msg {
+  unsigned long long regs[8];
+};
 // Per-process state
 struct proc {
   uintp sz;                     // Size of process memory (bytes)
@@ -89,8 +91,13 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  unsigned long long pcid;
 };
-
+extern unsigned long long pcid_counter;
+#define PCID_EPOCH(count) count/NPCIDS
+#define CR3_ENTRY_INVALIDATE(pcid, address) ((unsigned long long)(pcid)|(unsigned long long)(address))&~(1ul<<63ul)
+#define CR3_ENTRY_PRESERVE(pcid, address) ((unsigned long long)(pcid)|(unsigned long long)(address))|(1ul<<63ul)
+//#define CR3_ENTRY_PRESERVE CR3_ENTRY_INVALIDATE
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss

@@ -1,5 +1,5 @@
 struct stat;
-
+struct msg;
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
@@ -22,7 +22,9 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-
+int send(int,  struct msg*);
+int recv(int,  struct msg*);
+int send_recv(int, struct msg*);
 // ulib.c
 int stat(char*, struct stat*);
 char* strcpy(char*, char*);
@@ -36,3 +38,6 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+int cr3_test(void);
+int cr3_kernel(unsigned long long);
+int null_call(void);

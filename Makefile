@@ -95,10 +95,10 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -fno-omit-frame-pointer
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -fno-omit-frame-pointer -O2
 CFLAGS += -ffreestanding -fno-common -nostdlib -Iinclude -gdwarf-2 $(XFLAGS) $(OPT)
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
-ASFLAGS = -gdwarf-2 -Wa,-divide -Iinclude $(XFLAGS)
+ASFLAGS = -gdwarf-2 -Wa,-divide -Iinclude  -fno-pic $(XFLAGS)
 
 xv6.img: out/bootblock out/kernel.elf fs.img
 	dd if=/dev/zero of=xv6.img count=10000
@@ -130,7 +130,7 @@ uobj/%.o: ulib/%.c
 
 uobj/%.o: ulib/%.S
 	@mkdir -p uobj
-	$(CC) $(ASFLAGS) -c -o $@ $<
+	$(CC) $(ASFLAGS)  -c -o $@ $<
 
 out/bootblock: kernel/bootasm.S kernel/bootmain.c
 	@mkdir -p out
@@ -242,8 +242,9 @@ qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
 qemu-memfs: xv6memfs.img
-	$(QEMU) -nographic -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA)
-
+    $(QEMU) -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA) -cpu Broadwell -device isa-debug-exit,iobase=0xf4,iosize=0x04
+qemu-nox-memfs: xv6memfs.img
+	$(QEMU) -nographic -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA) -cpu Broadwell -device isa-debug-exit,iobase=0xf4,iosize=0x04
 qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 

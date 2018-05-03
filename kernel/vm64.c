@@ -32,16 +32,15 @@
 #include "proc.h"
 #include "elf.h"
 
-__thread struct cpu *cpu;
-__thread struct proc *proc;
+ struct cpu *cpu;
+ struct proc *proc;
 
-static pde_t *kpml4;
+pde_t *kpml4;
 static pde_t *kpdpt;
 static pde_t *iopgdir;
 static pde_t *kpgdir0;
 static pde_t *kpgdir1;
 
-void wrmsr(uint msr, uint64 val);
 
 void tvinit(void) {}
 void idtinit(void) {}
@@ -65,7 +64,6 @@ static void tss_set_ist(uint *tss, uint n, uint64 ist) {
   tss[n*2 + 7] = ist;
   tss[n*2 + 8] = ist >> 32;
 }
-
 extern void* vectors[];
 
 // Set up CPU's kernel segment descriptors.
@@ -85,7 +83,8 @@ seginit(void)
   for (n = 0; n < 256; n++)
     mkgate(idt, n, vectors[n], 0, 0);
   mkgate(idt, 64, vectors[64], 3, 1);
-
+  mkgate(idt, 0x02, vectors[0x02], 0, 0x02);
+  mkgate(idt, 0x18, vectors[0x18], 0, 0x03);
   lidt((void*) idt, PGSIZE);
 
   // create a page for cpu local storage 
@@ -94,6 +93,8 @@ seginit(void)
 
   gdt = (uint64*) local;
   tss = (uint*) (((char*) local) + 1024);
+  *((unsigned long long *)(&(tss[11]))) = (unsigned long long)kalloc();
+  *((unsigned long long *)(&(tss[13]))) = (unsigned long long)kalloc();
   tss[16] = 0x00680000; // IO Map Base = End of TSS
 
   // point FS smack in the middle of our local storage page
@@ -109,6 +110,7 @@ seginit(void)
   gdt[0] =         0x0000000000000000;
   gdt[SEG_KCODE] = 0x0020980000000000;  // Code, DPL=0, R/X
   gdt[SEG_UCODE] = 0x0020F80000000000;  // Code, DPL=3, R/X
+  //gdt[SEG_UCODE_SYSCALL] = 0x0020F80000000000;  // Code, DPL=3, R/X
   gdt[SEG_KDATA] = 0x0000920000000000;  // Data, DPL=0, W
   gdt[SEG_KCPU]  = 0x0000000000000000;  // unused
   gdt[SEG_UDATA] = 0x0000F20000000000;  // Data, DPL=3, W
@@ -185,9 +187,9 @@ kvmalloc(void)
 }
 
 void
-switchkvm(void)
+switchkvm()
 {
-  lcr3(v2p(kpml4));
+  lcr3(CR3_ENTRY_INVALIDATE(0,v2p(kpml4)));
 }
 
 void
@@ -201,7 +203,17 @@ switchuvm(struct proc *p)
   tss = (uint*) (((char*) cpu->local) + 1024);
   tss_set_rsp(tss, 0, (uintp)proc->kstack + KSTACKSIZE);
   pml4 = (void*) PTE_ADDR(p->pgdir[511]);
-  lcr3(v2p(pml4));
+  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+    proc->pcid = pcid_counter;
+    pcid_counter+=1;
+    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1), v2p(pml4)));
+  }
+  else{
+    //outb(0xf4, 0x00);
+    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1), v2p(pml4)));
+
+    
+  }
   popcli();
 }
 

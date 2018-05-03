@@ -11,7 +11,12 @@ struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
-
+struct{
+    struct proc * p;
+    struct msg m __attribute__ ((aligned (64)));
+  } ipc_endpoints[NENDS];
+unsigned long long pcid_counter = NPCIDS+1;
+unsigned int n_calls = 0;
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -47,6 +52,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->pcid = 0;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -120,6 +126,7 @@ growproc(int n)
       return -1;
   }
   proc->sz = sz;
+  proc->pcid=0;
   switchuvm(proc);
   return 0;
 }
@@ -283,7 +290,7 @@ scheduler(void)
       switchuvm(p);
       p->state = RUNNING;
       swtch(&cpu->scheduler, proc->context);
-      switchkvm();
+      //lcr3(CR3_ENTRY_PRESERVE(0,v2p(kpml4)));
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -439,7 +446,8 @@ procdump(void)
   [SLEEPING]  "sleep ",
   [RUNNABLE]  "runble",
   [RUNNING]   "run   ",
-  [ZOMBIE]    "zombie"
+  [ZOMBIE]    "zombie",
+  [IPC_DISPATCH] "ipc_dispatch"
   };
   int i;
   struct proc *p;
@@ -454,13 +462,92 @@ procdump(void)
     else
       state = "???";
     cprintf("%d %s %s", p->pid, state, p->name);
-    if(p->state == SLEEPING){
+    if(p->state == SLEEPING||p->state==IPC_DISPATCH){
       getstackpcs((uintp*)p->context->ebp, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
         cprintf(" %p", pc[i]);
     }
     cprintf("\n");
   }
+}
+__attribute__((always_inline)) static void tss_set_rsp(uint *tss, uint n, uint64 rsp) {
+  tss[n*2 + 1] = rsp;
+  tss[n*2 + 2] = rsp >> 32;
+}
+int send(int channel,struct msg * m){
+  struct proc * pro;
+  void * pml4;
+  if(unlikely((unsigned long long)m>=proc->sz || (unsigned long long)m+ sizeof(struct msg)>=proc->sz))
+    return -1;
+  if(unlikely(ipc_endpoints[channel].p==0))
+    return -2;
+  pro = proc;
+  
+  proc = ipc_endpoints[channel].p;
+  ipc_endpoints[channel].m = *m;
+  ipc_endpoints[channel].p = 0;
+  proc->state = RUNNING;
+  pro->state = RUNNABLE;
+  uint * tss = (uint*) (((char*) cpu->local) + 1024);
+  tss_set_rsp(tss, 0, (uintp)proc->kstack + KSTACKSIZE);
+  pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+    proc->pcid = pcid_counter;
+    pcid_counter++;
+    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  else{
+
+    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  swtch(&pro->context, proc->context);
+  release(&ptable.lock);
+  return 1;
+}
+int recv(int channel, struct msg * m){
+  if(unlikely((unsigned long long)m>=proc->sz || (unsigned long long)m+ sizeof(struct msg)>=proc->sz||channel>=NENDS))
+    return -1;
+    
+  ipc_endpoints[channel].p = proc;
+  proc->state = IPC_DISPATCH;
+  acquire(&ptable.lock);
+  swtch(&proc->context, cpu->scheduler);
+  *m = ipc_endpoints[channel].m;
+  return 1;
+}
+
+int send_recv(int channel, struct msg * m){
+
+  struct proc * pro;
+  void * pml4;
+  if(unlikely((unsigned long long)m>=proc->sz || (unsigned long long)m+ sizeof(struct msg)>=proc->sz||channel>=NENDS))
+    return -1;
+  if(unlikely(ipc_endpoints[channel].p==0))
+    return -2;
+  pro = proc;
+  proc->state = IPC_DISPATCH;
+  
+  ipc_endpoints[channel].m = *m;
+  
+  ipc_endpoints[channel].p->state = RUNNING;
+  uint * tss = (uint*) (((char*) cpu->local) + 1024);
+  pml4 = (void*) PTE_ADDR( ipc_endpoints[channel].p->pgdir[511]);
+  tss_set_rsp(tss, 0, (uintp)ipc_endpoints[channel].p->kstack+KSTACKSIZE);
+  if(unlikely(ipc_endpoints[channel].p->pcid+NPCIDS<pcid_counter)){
+    ipc_endpoints[channel].p->pcid = pcid_counter;
+    pcid_counter++;
+
+    lcr3(CR3_ENTRY_INVALIDATE((ipc_endpoints[channel].p->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  else{
+    lcr3(CR3_ENTRY_PRESERVE((ipc_endpoints[channel].p->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  //(ipc_endpoints[channel].p->pcid%NPCIDS + 1)
+  proc = ipc_endpoints[channel].p;
+  ipc_endpoints[channel].p = pro;
+  swtch(&pro->context, proc->context);
+  *m = ipc_endpoints[channel].m;
+  return 1;
 }
 
 

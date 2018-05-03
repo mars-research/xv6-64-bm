@@ -140,7 +140,7 @@ entry64high:
   mov %ax, %es
   mov %ax, %fs
   mov %ax, %gs
-
+  
 # check to see if we're booting a secondary core
   test %ebx, %ebx
   jnz entry64mp

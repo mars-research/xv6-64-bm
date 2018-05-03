@@ -150,12 +150,32 @@ rcr2(void)
   return val;
 }
 
-static inline void
+__attribute__((always_inline))  static inline void
 lcr3(uintp val) 
 {
   asm volatile("mov %0,%%cr3" : : "r" (val));
 }
-
+#ifdef X64
+static inline void rdmsr(uint msr, unsigned long long * bits)
+{
+   asm volatile("rdmsr" : "=a"(*((uint*)bits)), "=d"(*(&(((uint*)bits))[1])) : "c"(msr));
+}
+ 
+static inline void wrmsr(uint msr, unsigned long long bits)
+{
+   asm volatile("wrmsr" : : "a"((uint)bits), "d"((uint)(bits>>32)), "c"(msr));
+}
+#else
+static inline void rdmsr(uint msr, uint *lo, uint *hi)
+{
+   asm volatile("rdmsr" : "=a"(*lo), "=d"(*hi) : "c"(msr));
+}
+ 
+static inline void wrmsr(uint msr, uint lo, uint hi)
+{
+   asm volatile("wrmsr" : : "a"(lo), "d"(hi), "c"(msr));
+}
+#endif
 //PAGEBREAK: 36
 // Layout of the trap frame built on the stack by the
 // hardware and by trapasm.S, and passed to trap().

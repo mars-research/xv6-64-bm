@@ -1,12 +1,20 @@
 #include "syscall.h"
 #include "traps.h"
-
+.globl call_print_temp
+.extern panic_print
+.globl call_print_temp_r
 #define SYSCALL(name) \
   .globl name; \
   name: \
-    movl $SYS_ ## name, %eax; \
+    movq $SYS_ ## name, %rax; \
     int $T_SYSCALL; \
-    ret
+    retq
+#define SYSCALL_FAST(name) \
+  .globl name; \
+  name: \
+  movq $SYS_ ## name, %rax; \
+  syscall; \
+  retq
 
 SYSCALL(fork)
 SYSCALL(exit)
@@ -29,3 +37,9 @@ SYSCALL(getpid)
 SYSCALL(sbrk)
 SYSCALL(sleep)
 SYSCALL(uptime)
+SYSCALL_FAST(send)
+SYSCALL_FAST(send_recv)
+SYSCALL_FAST(recv)
+SYSCALL_FAST(cr3_test)
+SYSCALL_FAST(cr3_kernel)
+SYSCALL_FAST(null_call)

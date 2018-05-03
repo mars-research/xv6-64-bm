@@ -145,7 +145,7 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 
-static int (*syscalls[])(void) = {
+int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
 [SYS_wait]    sys_wait,
@@ -167,6 +167,52 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+};
+int
+sys_cr3_reload(void)
+{
+  void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+    proc->pcid = pcid_counter;
+    pcid_counter++;
+
+    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  else{
+    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  return 1;
+}
+int
+sys_cr3_kernel(unsigned long long num)
+{
+
+  for(unsigned long long i = 0;i<num;i++){
+  void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+    proc->pcid = pcid_counter;
+    pcid_counter++;
+
+    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  else{
+    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+  }
+  }
+  return 1;
+}
+int
+sys_null_call(void)
+{
+  return 1;
+}
+void * syscalls_fast[] = {
+  [SYS_cr3_test]  sys_cr3_reload,
+  [SYS_cr3_kernel]  sys_cr3_kernel,
+  [SYS_null_call]  sys_null_call,
+[SYS_send]    send,
+[SYS_send_recv]    send_recv,
+[SYS_recv]    recv,
 };
 
 void

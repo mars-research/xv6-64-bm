@@ -11,9 +11,27 @@ static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
 
+extern void syscall_entry();
+void * get_rsp(){
+  return *((void **)(&cpu->ts.esp0));
+}
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
 // doing some setup required for memory allocator to work.
+void syscallinit(){
+  unsigned long long l = ((SEG_UCODE-2)<<3 )<<16 | SEG_KCODE<<3;
+  wrmsr(0xC0000081, l<<32);
+  wrmsr(0xC0000082, syscall_entry);
+  wrmsr(0xC0000084, (1<<9));
+  rdmsr(0xC0000080, &l);
+  wrmsr(0xC0000080, l | 1);
+}
+void temp_print(unsigned long long stack){
+  cprintf("stack is %x%x;\n", (uint)(stack>>32), (uint)stack);
+}
+void print_test(){
+  cprintf("enter syscall \n");
+}
 int
 main(void)
 {
@@ -24,6 +42,7 @@ main(void)
   //  mpinit();      // otherwise use bios MP tables
   lapicinit();
   seginit();       // set up segments
+  
   cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
   picinit();       // interrupt controller
   ioapicinit();    // another interrupt controller
@@ -39,6 +58,7 @@ main(void)
     timerinit();   // uniprocessor timer
   //startothers();   // start other processors
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
+  syscallinit();
   userinit();      // first user process
   // Finish setting up this processor in mpmain.
   mpmain();
@@ -61,6 +81,9 @@ mpmain(void)
   cprintf("cpu%d: starting\n", cpu->id);
   idtinit();       // load idt register
   xchg(&cpu->started, 1); // tell startothers() we're up
+  asm volatile("movq %%cr4, %%rax\n\t"
+               "bts $17, %%rax\n\t"
+               "movq %%rax, %%cr4":::"rax");
   scheduler();     // start running processes
 }
 
