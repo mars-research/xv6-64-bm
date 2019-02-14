@@ -72,7 +72,7 @@ main(void)
 
     printf(1, "delta - %d\n",time1 - time);
     wait();
-    exit();
+    //exit();
   }
   printf(1, "uptime - %d\n", send(0, 90));
   for(;;){

@@ -91,12 +91,16 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+#ifdef PCID
   unsigned long long pcid;
+#endif
 };
+#ifdef PCID
 extern unsigned long long pcid_counter;
 #define PCID_EPOCH(count) count/NPCIDS
 #define CR3_ENTRY_INVALIDATE(pcid, address) ((unsigned long long)(pcid)|(unsigned long long)(address))&~(1ul<<63ul)
 #define CR3_ENTRY_PRESERVE(pcid, address) ((unsigned long long)(pcid)|(unsigned long long)(address))|(1ul<<63ul)
+#endif
 //#define CR3_ENTRY_PRESERVE CR3_ENTRY_INVALIDATE
 // Process memory is laid out contiguously, low addresses first:
 //   text

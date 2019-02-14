@@ -81,9 +81,11 @@ mpmain(void)
   cprintf("cpu%d: starting\n", cpu->id);
   idtinit();       // load idt register
   xchg(&cpu->started, 1); // tell startothers() we're up
+#ifdef PCID
   asm volatile("movq %%cr4, %%rax\n\t"
                "bts $17, %%rax\n\t"
-               "movq %%rax, %%cr4":::"rax");
+               "movq %%rax, %%cr4":::"rax"); //enables pcids
+#endif
   scheduler();     // start running processes
 }
 

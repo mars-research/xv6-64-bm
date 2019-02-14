@@ -15,7 +15,9 @@ struct{
     struct proc * p;
     struct msg m __attribute__ ((aligned (64)));
   } ipc_endpoints[NENDS];
+#ifdef PCID
 unsigned long long pcid_counter = NPCIDS+1;
+#endif
 unsigned int n_calls = 0;
 static struct proc *initproc;
 
@@ -52,7 +54,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+#ifdef PCID
   p->pcid = 0;
+#endif
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -126,7 +130,9 @@ growproc(int n)
       return -1;
   }
   proc->sz = sz;
+#ifdef PCID
   proc->pcid=0;
+#endif
   switchuvm(proc);
   return 0;
 }
@@ -491,6 +497,7 @@ int send(int channel,struct msg * m){
   uint * tss = (uint*) (((char*) cpu->local) + 1024);
   tss_set_rsp(tss, 0, (uintp)proc->kstack + KSTACKSIZE);
   pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+#ifdef PCID
   if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
     proc->pcid = pcid_counter;
     pcid_counter++;
@@ -500,6 +507,9 @@ int send(int channel,struct msg * m){
 
     lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
   }
+#else
+  lcr3(v2p(pml4)); //since no PCIDs just always load new cr3
+#endif
   swtch(&pro->context, proc->context);
   release(&ptable.lock);
   return 1;
@@ -533,6 +543,7 @@ int send_recv(int channel, struct msg * m){
   uint * tss = (uint*) (((char*) cpu->local) + 1024);
   pml4 = (void*) PTE_ADDR( ipc_endpoints[channel].p->pgdir[511]);
   tss_set_rsp(tss, 0, (uintp)ipc_endpoints[channel].p->kstack+KSTACKSIZE);
+#ifdef PCID
   if(unlikely(ipc_endpoints[channel].p->pcid+NPCIDS<pcid_counter)){
     ipc_endpoints[channel].p->pcid = pcid_counter;
     pcid_counter++;
@@ -542,6 +553,9 @@ int send_recv(int channel, struct msg * m){
   else{
     lcr3(CR3_ENTRY_PRESERVE((ipc_endpoints[channel].p->pcid%NPCIDS + 1),v2p(pml4)));
   }
+#else 
+  lcr3(v2p(pml4)); //since no PCIDs just always load new cr3
+#endif
   //(ipc_endpoints[channel].p->pcid%NPCIDS + 1)
   proc = ipc_endpoints[channel].p;
   ipc_endpoints[channel].p = pro;

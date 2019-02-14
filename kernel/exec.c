@@ -93,7 +93,9 @@ exec(char *path, char **argv)
   proc->sz = sz;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;
+#if PCID
   proc->pcid = 0;
+#endif
   switchuvm(proc);
   freevm(oldpgdir);
   return 0;

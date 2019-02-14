@@ -172,6 +172,7 @@ int
 sys_cr3_reload(void)
 {
   void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+#ifdef PCID
   if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
     proc->pcid = pcid_counter;
     pcid_counter++;
@@ -181,6 +182,9 @@ sys_cr3_reload(void)
   else{
     lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
   }
+#else
+  lcr3(v2p(pml4));
+#endif
   return 1;
 }
 int
@@ -189,6 +193,7 @@ sys_cr3_kernel(unsigned long long num)
 
   for(unsigned long long i = 0;i<num;i++){
   void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+#ifdef PCID
   if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
     proc->pcid = pcid_counter;
     pcid_counter++;
@@ -198,6 +203,9 @@ sys_cr3_kernel(unsigned long long num)
   else{
     lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
   }
+#else
+  lcr3(v2p(pml4));
+#endif
   }
   return 1;
 }

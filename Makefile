@@ -10,6 +10,10 @@ XFLAGS = -m32
 LDFLAGS = -m elf_i386 -nodefaultlibs
 endif
 
+ifneq ("$(PCID)", "")
+XFLAGS += -DPCID
+endif
+
 OPT ?= -O0
 
 OBJS := \
@@ -74,7 +78,8 @@ TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/d
 endif
 
 # If the makefile can't find QEMU, specify its path here
-QEMU = /usr/local/bin/qemu-system-x86_64
+#QEMU = /usr/local/bin/qemu-system-x86_64
+QEMU = /usr/bin/qemu-system-x86_64
 
 # Try to infer the correct QEMU
 ifndef QEMU

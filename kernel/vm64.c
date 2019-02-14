@@ -189,7 +189,11 @@ kvmalloc(void)
 void
 switchkvm()
 {
+#ifdef PCID
   lcr3(CR3_ENTRY_INVALIDATE(0,v2p(kpml4)));
+#else
+  lcr3(v2p(kpml4));
+#endif
 }
 
 void
@@ -203,6 +207,7 @@ switchuvm(struct proc *p)
   tss = (uint*) (((char*) cpu->local) + 1024);
   tss_set_rsp(tss, 0, (uintp)proc->kstack + KSTACKSIZE);
   pml4 = (void*) PTE_ADDR(p->pgdir[511]);
+#ifdef PCID
   if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
     proc->pcid = pcid_counter;
     pcid_counter+=1;
@@ -214,6 +219,9 @@ switchuvm(struct proc *p)
 
     
   }
+#else
+  lcr3(v2p(pml4));
+#endif
   popcli();
 }
 
