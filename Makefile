@@ -14,6 +14,10 @@ ifneq ("$(PCID)", "")
 XFLAGS += -DPCID
 endif
 
+ifneq ("$(PGE)", "")
+XFLAGS += -DPGE
+endif
+
 OPT ?= -O0
 
 OBJS := \

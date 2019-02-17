@@ -86,6 +86,11 @@ mpmain(void)
                "bts $17, %%rax\n\t"
                "movq %%rax, %%cr4":::"rax"); //enables pcids
 #endif
+#ifdef PGE
+  asm volatile("movq %%cr4, %%rax\n\t"
+               "bts $7, %%rax\n\t"
+               "movq %%rax, %%cr4":::"rax"); //enables global pages
+#endif
   scheduler();     // start running processes
 }
 
