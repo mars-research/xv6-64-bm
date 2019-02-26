@@ -169,7 +169,7 @@ int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 };
 int
-sys_cr3_reload(void)
+3_reload(void)
 {
   void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
 #ifdef PCID
@@ -192,19 +192,19 @@ sys_cr3_kernel(unsigned long long num)
 {
 
   for(unsigned long long i = 0;i<num;i++){
-  void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+    void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
 #ifdef PCID
-  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
-    proc->pcid = pcid_counter;
-    pcid_counter++;
+    if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+      proc->pcid = pcid_counter;
+      pcid_counter++;
 
-    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
-  }
-  else{
-    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
-  }
+      lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+    }
+    else{
+      lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+    }
 #else
-  lcr3(v2p(pml4));
+    lcr3(v2p(pml4));
 #endif
   }
   return 1;
