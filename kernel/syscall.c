@@ -169,18 +169,18 @@ int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 };
 int
-3_reload(void)
+sys_cr3_reload(void)
 {
   void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
 #ifdef PCID
-  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+  if(unlikely(proc->pcid + NPCIDS < pcid_counter)){
     proc->pcid = pcid_counter;
     pcid_counter++;
 
-    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid % NPCIDS + 1), v2p(pml4)));
   }
   else{
-    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+    lcr3(CR3_ENTRY_PRESERVE((proc->pcid % NPCIDS + 1), v2p(pml4)));
   }
 #else
   lcr3(v2p(pml4));
@@ -191,17 +191,17 @@ int
 sys_cr3_kernel(unsigned long long num)
 {
 
-  for(unsigned long long i = 0;i<num;i++){
-    void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+  for(unsigned long long i = 0; i<num; i++){
+    void * pml4 = (void*)PTE_ADDR(proc->pgdir[511]);
 #ifdef PCID
-    if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+    if(unlikely(proc->pcid + NPCIDS < pcid_counter)){
       proc->pcid = pcid_counter;
       pcid_counter++;
 
-      lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+      lcr3(CR3_ENTRY_INVALIDATE((proc->pcid % NPCIDS + 1), v2p(pml4)));
     }
     else{
-      lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+      lcr3(CR3_ENTRY_PRESERVE((proc->pcid % NPCIDS + 1), v2p(pml4)));
     }
 #else
     lcr3(v2p(pml4));
@@ -215,12 +215,12 @@ sys_null_call(void)
   return 1;
 }
 void * syscalls_fast[] = {
-  [SYS_cr3_test]  sys_cr3_reload,
+  [SYS_cr3_test]    sys_cr3_reload,
   [SYS_cr3_kernel]  sys_cr3_kernel,
-  [SYS_null_call]  sys_null_call,
-[SYS_send]    send,
-[SYS_send_recv]    send_recv,
-[SYS_recv]    recv,
+  [SYS_null_call]   sys_null_call,
+  [SYS_send]        send,
+  [SYS_send_recv]   send_recv,
+  [SYS_recv]        recv,
 };
 
 void

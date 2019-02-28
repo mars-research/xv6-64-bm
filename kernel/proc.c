@@ -480,12 +480,12 @@ __attribute__((always_inline)) static void tss_set_rsp(uint *tss, uint n, uint64
   tss[n*2 + 1] = rsp;
   tss[n*2 + 2] = rsp >> 32;
 }
-int send(int channel,struct msg * m){
-  struct proc * pro;
-  void * pml4;
-  if(unlikely((unsigned long long)m>=proc->sz || (unsigned long long)m+ sizeof(struct msg)>=proc->sz))
+int send(int channel,struct msg *m){
+  struct proc *pro;
+  void *pml4;
+  if(unlikely((unsigned long long)m >= proc->sz || (unsigned long long)m + sizeof(struct msg) >= proc->sz))
     return -1;
-  if(unlikely(ipc_endpoints[channel].p==0))
+  if(unlikely(ipc_endpoints[channel].p == 0))
     return -2;
   pro = proc;
   
@@ -494,18 +494,17 @@ int send(int channel,struct msg * m){
   ipc_endpoints[channel].p = 0;
   proc->state = RUNNING;
   pro->state = RUNNABLE;
-  uint * tss = (uint*) (((char*) cpu->local) + 1024);
+  uint *tss = (uint*)(((char*)cpu->local) + 1024);
   tss_set_rsp(tss, 0, (uintp)proc->kstack + KSTACKSIZE);
-  pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+  pml4 = (void*)PTE_ADDR(proc->pgdir[511]);
 #ifdef PCID
-  if(unlikely(proc->pcid+NPCIDS<pcid_counter)){
+  if(unlikely(proc->pcid + NPCIDS < pcid_counter)){
     proc->pcid = pcid_counter;
     pcid_counter++;
-    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+    lcr3(CR3_ENTRY_INVALIDATE((proc->pcid % NPCIDS + 1), v2p(pml4)));
   }
   else{
-
-    lcr3(CR3_ENTRY_PRESERVE((proc->pcid%NPCIDS + 1),v2p(pml4)));
+    lcr3(CR3_ENTRY_PRESERVE((proc->pcid % NPCIDS + 1), v2p(pml4)));
   }
 #else
   lcr3(v2p(pml4)); //since no PCIDs just always load new cr3
@@ -514,8 +513,8 @@ int send(int channel,struct msg * m){
   release(&ptable.lock);
   return 1;
 }
-int recv(int channel, struct msg * m){
-  if(unlikely((unsigned long long)m>=proc->sz || (unsigned long long)m+ sizeof(struct msg)>=proc->sz||channel>=NENDS))
+int recv(int channel, struct msg *m){
+  if(unlikely((unsigned long long)m >= proc->sz || (unsigned long long)m + sizeof(struct msg) >= proc->sz || channel >= NENDS))
     return -1;
     
   ipc_endpoints[channel].p = proc;
@@ -526,13 +525,13 @@ int recv(int channel, struct msg * m){
   return 1;
 }
 
-int send_recv(int channel, struct msg * m){
+int send_recv(int channel, struct msg *m){
 
-  struct proc * pro;
-  void * pml4;
-  if(unlikely((unsigned long long)m>=proc->sz || (unsigned long long)m+ sizeof(struct msg)>=proc->sz||channel>=NENDS))
+  struct proc *pro;
+  void *pml4;
+  if(unlikely((unsigned long long)m >= proc->sz || (unsigned long long)m + sizeof(struct msg) >= proc->sz || channel >= NENDS))
     return -1;
-  if(unlikely(ipc_endpoints[channel].p==0))
+  if(unlikely(ipc_endpoints[channel].p == 0))
     return -2;
   pro = proc;
   proc->state = IPC_DISPATCH;
@@ -540,18 +539,18 @@ int send_recv(int channel, struct msg * m){
   ipc_endpoints[channel].m = *m;
   
   ipc_endpoints[channel].p->state = RUNNING;
-  uint * tss = (uint*) (((char*) cpu->local) + 1024);
-  pml4 = (void*) PTE_ADDR( ipc_endpoints[channel].p->pgdir[511]);
-  tss_set_rsp(tss, 0, (uintp)ipc_endpoints[channel].p->kstack+KSTACKSIZE);
+  uint * tss = (uint*)(((char*)cpu->local) + 1024);
+  pml4 = (void*)PTE_ADDR(ipc_endpoints[channel].p->pgdir[511]);
+  tss_set_rsp(tss, 0, (uintp)ipc_endpoints[channel].p->kstack + KSTACKSIZE);
 #ifdef PCID
-  if(unlikely(ipc_endpoints[channel].p->pcid+NPCIDS<pcid_counter)){
+  if(unlikely(ipc_endpoints[channel].p->pcid + NPCIDS < pcid_counter)){
     ipc_endpoints[channel].p->pcid = pcid_counter;
     pcid_counter++;
 
-    lcr3(CR3_ENTRY_INVALIDATE((ipc_endpoints[channel].p->pcid%NPCIDS + 1),v2p(pml4)));
+    lcr3(CR3_ENTRY_INVALIDATE((ipc_endpoints[channel].p->pcid % NPCIDS + 1), v2p(pml4)));
   }
   else{
-    lcr3(CR3_ENTRY_PRESERVE((ipc_endpoints[channel].p->pcid%NPCIDS + 1),v2p(pml4)));
+    lcr3(CR3_ENTRY_PRESERVE((ipc_endpoints[channel].p->pcid % NPCIDS + 1), v2p(pml4)));
   }
 #else 
   lcr3(v2p(pml4)); //since no PCIDs just always load new cr3

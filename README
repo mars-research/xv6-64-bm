@@ -34,3 +34,22 @@ The Makefile defaults to building the 32bit version of xv6.  Define the X64
 environment variable to build the 64bit version.
 
 README.64BIT contains notes about the 64bit port.
+
+BAREMETAL BOOT INFO
+------------------------------------------------------------------------------------------------------
+Run on a Cloudlab Wisc220g2 node for PCID support and Ubuntu 18 for the right version of QEMU
+
+1) Install QEMU
+   edit Makefile with proper QEMU location if necessary
+
+2) build with 'X64=1 MEMFS=1 make'
+   optional flags are PCID=1 for PCIDs and PGE=1 for global pages
+
+3) run 'make qemu-nox-memfs' with the same flags used in the previous step
+   will boot into xv6 in qemu, just exit qemu after it boots
+
+4) copy 'xv6memfs.img' into /boot/
+
+5) update grub the same way as for booting 32 bit xv6
+
+6) restart and choose xv6 from the boot menu (will have to use web console for wisc node)

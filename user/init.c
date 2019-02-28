@@ -28,10 +28,10 @@ main(void)
   dup(0);  // stdout
   dup(0);  // stderr
   pid = fork();
-  if(pid==0){
+  if(pid == 0){
     struct msg m;
     recv(0,&m);
-    for(unsigned long long i = 0;i<ITERS-1ul;i++){
+    for(unsigned long long i = 0; i<ITERS-1ul; i++){
       send_recv(0, &m);
     }
     send(0, &m);
@@ -39,41 +39,42 @@ main(void)
   }else{
     struct msg m;
     sleep(100);
-    unsigned long long time = rdtsc();
-    for(unsigned long long i = 0;i<ITERS;i++){
+
+    unsigned long long reload_time = rdtsc();
+    for(unsigned long long i = 0; i<ITERS; i++){
       cr3_test();
     }
-    time = rdtsc() - time;
-    time /= ITERS;
-    printf(1, "reload time - %d\n",time);
+    reload_time = rdtsc() - reload_time;
+    reload_time /= ITERS;
+    printf(1, "reload time - %d\n", reload_time);
 
-    unsigned long long time1 = rdtsc();
-    for(unsigned long long i = 0;i<ITERS;i++){
+    unsigned long long ipc_time = rdtsc();
+    for(unsigned long long i = 0; i<ITERS; i++){
       send_recv(0, &m);
     }
-    time1 = rdtsc() - time1;
-    time1 /= ITERS;
-    printf(1, "ipc time - %d\n",time1);
+    ipc_time = rdtsc() - ipc_time;
+    ipc_time /= ITERS;
+    printf(1, "ipc time - %d\n",ipc_time);
 
-    unsigned long long time2 = rdtsc();
-    for(unsigned long long i = 0;i<ITERS;i++){
+    unsigned long long null_call_time = rdtsc();
+    for(unsigned long long i = 0; i<ITERS; i++){
       null_call();
     }
-    time2 = rdtsc() - time2;
-    time2 /= ITERS;
-    printf(1, "null_call time - %d\n",time2);
+    null_call_time = rdtsc() - null_call_time;
+    null_call_time /= ITERS;
+    printf(1, "null_call time - %d\n",null_call_time);
 
-    unsigned long long time3 = rdtsc();
+    unsigned long long cr3_kernel_time = rdtsc();
     cr3_kernel(ITERS);
+    cr3_kernel_time = rdtsc() - cr3_kernel_time;
+    cr3_kernel_time /= ITERS;
+    printf(1, "cr3_kernel time - %d\n",cr3_kernel_time);
 
-    time3 = rdtsc() - time3;
-    time3 /= ITERS;
-    printf(1, "cr3_kernel time - %d\n",time3);
-
-    printf(1, "delta - %d\n",time1 - time);
+    printf(1, "ipc/reload time delta - %d\n",ipc_time - reload_time);
     wait();
     //exit();
   }
+  
   printf(1, "uptime - %d\n", send(0, 90));
   for(;;){
     printf(1, "init: starting sh\n");
