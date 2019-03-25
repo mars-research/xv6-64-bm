@@ -27,7 +27,7 @@ EOF
 % mcopy -o syslinux.cfg s:syslinux/syslinux.cfg
 
 # install xv6 
-% mcopy -o out/kernel.elf s:kernel.elf
+% mcopy -o kernel.elf s:kernel.elf
 
 # boot
 % qemu-system-i386 hdd -net none

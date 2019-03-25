@@ -2,7 +2,7 @@
 
 ifneq ("$(X64)","")
 BITS = 64
-XOBJS = kobj/vm64.o
+XOBJS = vm64.o
 XFLAGS = -m64 -DX64 -mcmodel=kernel -mtls-direct-seg-refs -mno-red-zone
 LDFLAGS = -m elf_x86_64 -nodefaultlibs
 else
@@ -13,41 +13,41 @@ endif
 OPT ?= -O0
 
 OBJS := \
-	kobj/bio.o\
-	kobj/console.o\
-	kobj/exec.o\
-	kobj/file.o\
-	kobj/fs.o\
-	kobj/ide.o\
-	kobj/ioapic.o\
-	kobj/kalloc.o\
-	kobj/kbd.o\
-	kobj/lapic.o\
-	kobj/log.o\
-	kobj/main.o\
-	kobj/mp.o\
-	kobj/acpi.o\
-	kobj/picirq.o\
-	kobj/pipe.o\
-	kobj/proc.o\
-	kobj/spinlock.o\
-	kobj/string.o\
-	kobj/swtch$(BITS).o\
-	kobj/syscall.o\
-	kobj/sysfile.o\
-	kobj/sysproc.o\
-	kobj/timer.o\
-	kobj/trapasm$(BITS).o\
-	kobj/trap.o\
-	kobj/uart.o\
-	kobj/vectors.o\
-	kobj/vm.o\
+	bio.o\
+	console.o\
+	exec.o\
+	file.o\
+	fs.o\
+	ide.o\
+	ioapic.o\
+	kalloc.o\
+	kbd.o\
+	lapic.o\
+	log.o\
+	main.o\
+	mp.o\
+	acpi.o\
+	picirq.o\
+	pipe.o\
+	proc.o\
+	spinlock.o\
+	string.o\
+	swtch$(BITS).o\
+	syscall.o\
+	sysfile.o\
+	sysproc.o\
+	timer.o\
+	trapasm$(BITS).o\
+	trap.o\
+	uart.o\
+	vectors.o\
+	vm.o\
 	$(XOBJS)
 
 ifneq ("$(MEMFS)","")
 # build filesystem image in to kernel and use memory-ide-device
 # instead of mounting the filesystem on ide1
-OBJS := $(filter-out kobj/ide.o,$(OBJS)) kobj/memide.o
+OBJS := $(filter-out ide.o,$(OBJS)) memide.o
 FSIMAGE := fs.img
 endif
 
@@ -74,7 +74,8 @@ TOOLPREFIX := $(shell if i386-jos-elf-objdump -i 2>&1 | grep '^elf32-i386$$' >/d
 endif
 
 # If the makefile can't find QEMU, specify its path here
-QEMU = /usr/local/bin/qemu-system-x86_64
+QEMU = /usr/bin/qemu-system-x86_64
+#QEMU = /usr/local/bin/qemu-system-x86_64
 
 # Try to infer the correct QEMU
 ifndef QEMU
@@ -100,131 +101,103 @@ CFLAGS += -ffreestanding -fno-common -nostdlib -Iinclude -gdwarf-2 $(XFLAGS) $(O
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -fno-pic -gdwarf-2 -Wa,-divide -Iinclude $(XFLAGS)
 
-xv6.img: out/bootblock out/kernel.elf fs.img
+xv6.img: bootblock kernel.elf fs.img
 	dd if=/dev/zero of=xv6.img count=10000
-	dd if=out/bootblock of=xv6.img conv=notrunc
-	dd if=out/kernel.elf of=xv6.img seek=1 conv=notrunc
+	dd if=bootblock of=xv6.img conv=notrunc
+	dd if=kernel.elf of=xv6.img seek=1 conv=notrunc
 
-xv6memfs.img: out/bootblock out/kernel.elf
+xv6memfs.img: bootblock kernel.elf
 	dd if=/dev/zero of=xv6memfs.img count=10000
-	dd if=out/bootblock of=xv6memfs.img conv=notrunc
-	dd if=out/kernel.elf of=xv6memfs.img seek=1 conv=notrunc
+	dd if=bootblock of=xv6memfs.img conv=notrunc
+	dd if=kernel.elf of=xv6memfs.img seek=1 conv=notrunc
 
-# kernel object files
-kobj/%.o: kernel/%.c
-	@mkdir -p kobj
-	$(CC) $(CFLAGS) -c -o $@ $<
+bootblock: bootasm.S bootmain.c
+	$(CC) -fno-builtin -fno-pic -m32 -nostdinc -Iinclude -O -o bootmain.o -c bootmain.c
+	$(CC) -fno-builtin -fno-pic -m32 -nostdinc -Iinclude -o bootasm.o -c bootasm.S
+	$(LD) -m elf_i386 -nodefaultlibs -N -e start -Ttext 0x7C00 -o bootblock.o bootasm.o bootmain.o
+	$(OBJDUMP) -S bootblock.o > bootblock.asm
+	$(OBJCOPY) -S -O binary -j .text bootblock.o bootblock
+	./sign.pl bootblock
 
-kobj/%.o: kernel/%.S
-	@mkdir -p kobj
-	$(CC) $(ASFLAGS) -c -o $@ $<
+entryother: entryother.S
+	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -o entryother.o -c entryother.S
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7000 -o bootblockother.o entryother.o
+	$(OBJCOPY) -S -O binary -j .text bootblockother.o entryother
+	$(OBJDUMP) -S bootblockother.o > entryother.asm
 
-# userspace object files
-uobj/%.o: user/%.c
-	@mkdir -p uobj
-	$(CC) $(CFLAGS) -c -o $@ $<
+INITCODESRC = initcode$(BITS).S
+initcode: $(INITCODESRC)
+	$(CC) $(CFLAGS) -nostdinc -I. -o initcode.o -c $(INITCODESRC)
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o initcode.out initcode.o
+	$(OBJCOPY) -S -O binary initcode.out initcode
+	$(OBJDUMP) -S initcode.o > initcode.asm
 
-uobj/%.o: ulib/%.c
-	@mkdir -p uobj
-	$(CC) $(CFLAGS) -c -o $@ $<
+ENTRYCODE = entry$(BITS).o
+LINKSCRIPT = kernel$(BITS).ld
+kernel.elf: $(OBJS) $(ENTRYCODE) entryother initcode $(LINKSCRIPT) $(FSIMAGE)
+	$(LD) $(LDFLAGS) -T $(LINKSCRIPT) -o kernel.elf $(ENTRYCODE) $(OBJS) -b binary initcode entryother $(FSIMAGE)
+	$(OBJDUMP) -S kernel.elf > kernel.asm
+	$(OBJDUMP) -t kernel.elf | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 
-uobj/%.o: ulib/%.S
-	@mkdir -p uobj
-	$(CC) $(ASFLAGS) -c -o $@ $<
+MKVECTORS = vectors$(BITS).pl
+vectors.S: $(MKVECTORS)
+	perl $(MKVECTORS) > vectors.S
 
-out/bootblock: kernel/bootasm.S kernel/bootmain.c
-	@mkdir -p out
-	$(CC) -fno-builtin -fno-pic -m32 -nostdinc -Iinclude -O -o out/bootmain.o -c kernel/bootmain.c
-	$(CC) -fno-builtin -fno-pic -m32 -nostdinc -Iinclude -o out/bootasm.o -c kernel/bootasm.S
-	$(LD) -m elf_i386 -nodefaultlibs -N -e start -Ttext 0x7C00 -o out/bootblock.o out/bootasm.o out/bootmain.o
-	$(OBJDUMP) -S out/bootblock.o > out/bootblock.asm
-	$(OBJCOPY) -S -O binary -j .text out/bootblock.o out/bootblock
-	tools/sign.pl out/bootblock
+ULIB = ulib.o usys.o printf.o umalloc.o
 
-out/entryother: kernel/entryother.S
-	@mkdir -p out
-	$(CC) $(CFLAGS) -fno-pic -nostdinc -I. -o out/entryother.o -c kernel/entryother.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0x7000 -o out/bootblockother.o out/entryother.o
-	$(OBJCOPY) -S -O binary -j .text out/bootblockother.o out/entryother
-	$(OBJDUMP) -S out/bootblockother.o > out/entryother.asm
-
-INITCODESRC = kernel/initcode$(BITS).S
-out/initcode: $(INITCODESRC)
-	@mkdir -p out
-	$(CC) $(CFLAGS) -nostdinc -I. -o out/initcode.o -c $(INITCODESRC)
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o out/initcode.out out/initcode.o
-	$(OBJCOPY) -S -O binary out/initcode.out out/initcode
-	$(OBJDUMP) -S out/initcode.o > out/initcode.asm
-
-ENTRYCODE = kobj/entry$(BITS).o
-LINKSCRIPT = kernel/kernel$(BITS).ld
-out/kernel.elf: $(OBJS) $(ENTRYCODE) out/entryother out/initcode $(LINKSCRIPT) $(FSIMAGE)
-	$(LD) $(LDFLAGS) -T $(LINKSCRIPT) -o out/kernel.elf $(ENTRYCODE) $(OBJS) -b binary out/initcode out/entryother $(FSIMAGE)
-	$(OBJDUMP) -S out/kernel.elf > out/kernel.asm
-	$(OBJDUMP) -t out/kernel.elf | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > out/kernel.sym
-
-MKVECTORS = tools/vectors$(BITS).pl
-kernel/vectors.S: $(MKVECTORS)
-	perl $(MKVECTORS) > kernel/vectors.S
-
-ULIB = uobj/ulib.o uobj/usys.o uobj/printf.o uobj/umalloc.o
-
-fs/%: uobj/%.o $(ULIB)
-	@mkdir -p fs out
+_%: %.o $(ULIB)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
-	$(OBJDUMP) -S $@ > out/$*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > out/$*.sym
+	$(OBJDUMP) -S $@ > $*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-fs/forktest: uobj/forktest.o $(ULIB)
-	@mkdir -p fs
+_forktest: forktest.o $(ULIB)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o fs/forktest uobj/forktest.o uobj/ulib.o uobj/usys.o
-	$(OBJDUMP) -S fs/forktest > out/forktest.asm
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o _forktest forktest.o ulib.o usys.o
+	$(OBJDUMP) -S _forktest > forktest.asm
 
-out/mkfs: tools/mkfs.c include/fs.h
-	gcc -Werror -Wall -o out/mkfs tools/mkfs.c
+mkfs: mkfs.c fs.h
+	gcc -Werror -Wall -o mkfs mkfs.c
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
 # details:
 # http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
-.PRECIOUS: uobj/%.o
+.PRECIOUS: %.o
 
 UPROGS=\
-	fs/cat\
-	fs/echo\
-	fs/forktest\
-	fs/grep\
-	fs/init\
-	fs/kill\
-	fs/ln\
-	fs/ls\
-	fs/mkdir\
-	fs/rm\
-	fs/sh\
-	fs/stressfs\
-	fs/usertests\
-	fs/wc\
-	fs/zombie\
+	_cat\
+	_echo\
+	_forktest\
+	_grep\
+	_init\
+	_kill\
+	_ln\
+	_ls\
+	_mkdir\
+	_rm\
+	_sh\
+	_stressfs\
+	_usertests\
+	_wc\
+	_zombie\
 
-fs/README: README
-	@mkdir -p fs
-	cp README fs/README
-
-fs.img: out/mkfs README $(UPROGS)
-	out/mkfs fs.img README $(UPROGS)
+fs.img: mkfs README $(UPROGS)
+	./mkfs fs.img README $(UPROGS)
 
 -include */*.d
 
 clean: 
-	rm -rf out fs uobj kobj
-	rm -f kernel/vectors.S xv6.img xv6memfs.img fs.img .gdbinit
+	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
+		*.o *.d *.asm *.sym vectors.S bootblock entryother \
+	       initcode initcode.out xv6.img xv6memfs.img fs.img kernel.elf mkfs \
+	       .gdbinit \
+	       $(UPROGS)
 
 # run in emulators
 
 bochs : fs.img xv6.img
-	if [ ! -e .bochsrc ]; then ln -s tools/dot-bochsrc .bochsrc; fi
+	if [ ! -e .bochsrc ]; then ln -s dot-bochsrc .bochsrc; fi
 	bochs -q
 
 # try to generate a unique GDB port
@@ -247,7 +220,7 @@ qemu-memfs: xv6memfs.img
 qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
-.gdbinit: tools/gdbinit.tmpl
+.gdbinit: gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
 qemu-gdb: fs.img xv6.img .gdbinit
