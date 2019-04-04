@@ -480,6 +480,37 @@ __attribute__((always_inline)) static void tss_set_rsp(uint *tss, uint n, uint64
   tss[n*2 + 1] = rsp;
   tss[n*2 + 2] = rsp >> 32;
 }
+
+int num_pages = 0;
+
+int sys_set_size(void){
+    int n;
+    if(argint(0, &n) <0)
+      return -1;
+
+    num_pages = n;
+
+    cprintf("setting %d pages\n", n);
+    return 1;
+}
+
+int sysenter_dispatch_test(/* PARAMS? */){
+  struct proc *p = proc;
+  char *a = (char *)KERNLINK;
+  int sum;
+  void *pml4;
+
+  pml4 = (void*)PTE_ADDR(p->pgdir[511]);
+  lcr3(v2p(pml4));
+
+  for(int i = 0; i < num_pages; i++){
+    sum += *(int *)a;
+    a += PGSIZE;
+  }
+
+  return 0;
+}
+
 int send(int channel,struct msg *m){
   struct proc *pro;
   void *pml4;

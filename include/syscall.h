@@ -26,3 +26,4 @@
 #define SYS_cr3_test 25
 #define SYS_cr3_kernel 26
 #define SYS_null_call 27
+#define SYS_set_size 28

@@ -107,3 +107,4 @@ extern unsigned long long pcid_counter;
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+extern int sysenter_dispatch() __attribute__ ((section (".entrycode")));

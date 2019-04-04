@@ -7,14 +7,16 @@
 .extern print_test
 .extern pgs
 .extern proc
+.extern sysenter_dispatch_test
 syscall_entry:
   pushq %rbp
   movq %rsp, %rbp
   movq (proc), %rsp
   movq 0x10(%rsp), %rsp
-  addq $KSTACKSIZE, %rsp
+#addq $KSTACKSIZE, %rsp
   push %rcx
   pushq %r11
+  callq sysenter_dispatch_test
   callq *syscalls_fast(,%rax,8)
   popq %r11
   popq %rcx

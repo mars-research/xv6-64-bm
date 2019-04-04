@@ -39,6 +39,7 @@ main(void)
       send(0, &m);
       exit();
     }else{
+
       struct msg m;
       sleep(100);
 
@@ -48,7 +49,7 @@ main(void)
       }
       reload_time = rdtsc() - reload_time;
       reload_time /= ITERS;
-      printf(1, "reload time - %d\n", reload_time);
+      printf(1, "clean reload time - %d\n", reload_time);
 
       unsigned long long ipc_time = rdtsc();
       for(unsigned long long i = 0; i<ITERS; i++){
@@ -74,6 +75,24 @@ main(void)
 
       printf(1, "ipc/reload time delta - %d\n",ipc_time - reload_time);
       printf(1, "ipc/sum of parts delta - %d\n", ipc_time - (2*(reload_time-null_call_time) + 2*null_call_time));
+
+
+      for(int i = 0; i < 128; i++){
+        set_size(i);
+        printf(1, "touch %d pages:", i);
+
+        unsigned long long start, end;
+        start = rdtsc();
+        for(unsigned long long i = 0; i < ITERS; i++){
+          cr3_test();
+        }
+        //printf(1, "after test loop\n");
+        end = rdtsc();
+
+        printf(1, "overhead of cr3_reload across %d runs: average cycles %d\n",
+              ITERS, (unsigned long)(end-start)/ITERS);
+      }
+
       wait();
       //exit();
     }

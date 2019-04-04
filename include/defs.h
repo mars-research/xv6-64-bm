@@ -126,6 +126,7 @@ void            yield(void);
 int             send(int,struct msg* );
 int             send_recv(int,struct msg* );
 int             recv(int,struct msg* );
+int             sys_set_size(void);
 // swtch.S
 void            swtch(struct context**, struct context*);
 
