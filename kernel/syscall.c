@@ -7,6 +7,12 @@
 #include "x86.h"
 #include "syscall.h"
 
+#define ITERS 100000ul
+__attribute((always_inline)) unsigned long long rdtsc(){
+  unsigned long long lo, hi;
+  asm volatile( "rdtsc" : "=a" (lo), "=d" (hi) ); 
+  return( lo | (hi << 32) );
+}
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
 // Arguments on the stack, from the user call to the C
@@ -170,10 +176,18 @@ int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_set_size]    sys_set_size,
 };
+
 int
 sys_cr3_reload(void)
 {
-  void * pml4 = (void*) PTE_ADDR(proc->pgdir[511]);
+  struct proc *p = proc;
+  unsigned long long  start, end, total;
+  int sum;
+
+  void * pml4;
+  
+  pml4 = (void*)PTE_ADDR(p->pgdir[511]);
+
 #ifdef PCID
   if(unlikely(proc->pcid + NPCIDS < pcid_counter)){
     proc->pcid = pcid_counter;
@@ -187,6 +201,39 @@ sys_cr3_reload(void)
 #else
   lcr3(v2p(pml4));
 #endif
+
+  for(int num_pages = 0; num_pages < 128; num_pages++){
+    cprintf("touch %d pages:", num_pages);
+    total = 0;
+    for(unsigned long long i = 0; i < ITERS; i++){
+      sum = 0;
+      char *a = (char *)KERNLINK;
+      for(unsigned long long j = 0; j < num_pages; j++){
+        sum += *(int *)a;
+        a += PGSIZE;
+      }
+      start = rdtsc();
+
+#ifdef PCID
+      if(unlikely(proc->pcid + NPCIDS < pcid_counter)){
+        proc->pcid = pcid_counter;
+        pcid_counter++;
+
+        lcr3(CR3_ENTRY_INVALIDATE((proc->pcid % NPCIDS + 1), v2p(pml4)));
+      }
+      else{
+        lcr3(CR3_ENTRY_PRESERVE((proc->pcid % NPCIDS + 1), v2p(pml4)));
+      }
+#else
+      lcr3(v2p(pml4));
+#endif
+      //cprintf("end of time");
+      end = rdtsc();
+      total += end - start;
+    }
+    cprintf("overhead of cr3_reload across %d runs: average cycles %d\n",
+          ITERS, (unsigned long)(total)/ITERS);
+  }
   return 1;
 }
 int

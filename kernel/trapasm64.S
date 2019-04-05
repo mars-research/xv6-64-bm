@@ -13,10 +13,10 @@ syscall_entry:
   movq %rsp, %rbp
   movq (proc), %rsp
   movq 0x10(%rsp), %rsp
-#addq $KSTACKSIZE, %rsp
+  addq $KSTACKSIZE, %rsp
   push %rcx
   pushq %r11
-  callq sysenter_dispatch_test
+#callq sysenter_dispatch_test
   callq *syscalls_fast(,%rax,8)
   popq %r11
   popq %rcx
