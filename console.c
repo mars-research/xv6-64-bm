@@ -123,7 +123,7 @@ panic(char *s)
   
   cli();
   cons.locking = 0;
-  cprintf("cpu%d: panic: ", cpu->id);
+  cprintf("lapicid %d: panic: ", lapicid());
   cprintf(s);
   cprintf("\n");
   getcallerpcs(&s, pcs);

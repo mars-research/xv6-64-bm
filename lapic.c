@@ -127,6 +127,50 @@ cpunum(void)
   return 0;
 }
 
+int
+lapicid(void)
+{
+    if(!lapic)
+        return 0;
+    return lapic[ID] >> 24;
+}
+
+// need to revise the looping once I get multiple cpus to boot
+struct cpu*
+mycpu(void)
+{
+    int apicid, i;
+
+    if(readeflags()&FL_IF)
+        panic("mycpu called with interrupts enabled\n");
+
+    apicid = lapicid();
+
+    //cprintf("\nncpu = %d\n",ncpu);
+
+    // should be < ncpu, scheduler enters an infinite loop if more than 1 cpu are used
+    for(i = 0; i <= ncpu; ++i)
+    {
+	//cprintf("\napicid = %d || cpu.apicid = %d %d\n", apicid, cpus[i].apicid, i);
+        if(cpus[i].apicid == apicid)
+            return &cpus[i];
+    }
+
+    panic("unknown apicid\n");
+}
+
+struct proc*
+myproc(void)
+{
+    struct cpu* c;
+    struct proc* p;
+    pushcli();
+    c = mycpu();
+    p = c->proc;
+    popcli();
+    return p;
+}
+
 // Acknowledge interrupt.
 void
 lapiceoi(void)

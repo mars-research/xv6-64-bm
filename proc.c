@@ -282,7 +282,7 @@ scheduler(void)
       proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
+      swtch(&(mycpu()->scheduler), proc->context);
       switchkvm();
 
       // Process is done running for now.
@@ -303,15 +303,15 @@ sched(void)
 
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
-  if(cpu->ncli != 1)
+  if(mycpu()->ncli != 1)
     panic("sched locks");
   if(proc->state == RUNNING)
     panic("sched running");
   if(readeflags()&FL_IF)
     panic("sched interruptible");
-  intena = cpu->intena;
-  swtch(&proc->context, cpu->scheduler);
-  cpu->intena = intena;
+  intena = mycpu()->intena;
+  swtch(&proc->context, mycpu()->scheduler);
+  mycpu()->intena = intena;
 }
 
 // Give up the CPU for one scheduling round.

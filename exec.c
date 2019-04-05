@@ -17,6 +17,7 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
+  struct proc* curproc = myproc();
 
   if((ip = namei(path)) == 0)
     return -1;

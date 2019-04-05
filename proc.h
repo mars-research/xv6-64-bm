@@ -15,10 +15,11 @@ struct cpu {
   // Cpu-local storage variables; see below
 #if X64
   void *local;
-#else
-  struct cpu *cpu;
-  struct proc *proc;           // The currently-running process.
 #endif
+//#else
+  //struct cpu *cpu;
+  struct proc *proc;           // The currently-running process.
+//#endif
 };
 
 extern struct cpu cpus[NCPU];

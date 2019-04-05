@@ -24,7 +24,7 @@ main(void)
   //  mpinit();      // otherwise use bios MP tables
   lapicinit();
   seginit();       // set up segments
-  cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
+  cprintf("\ncpu%d: starting xv6\n\n", cpunum());
   picinit();       // interrupt controller
   ioapicinit();    // another interrupt controller
   consoleinit();   // I/O devices & their interrupts
@@ -58,9 +58,9 @@ mpenter(void)
 static void
 mpmain(void)
 {
-  cprintf("cpu%d: starting\n", cpu->id);
+  cprintf("cpu%d: starting\n", cpunum());
   idtinit();       // load idt register
-  xchg(&cpu->started, 1); // tell startothers() we're up
+  xchg(&(mycpu()->started), 1); // tell startothers() we're up
   scheduler();     // start running processes
 }
 

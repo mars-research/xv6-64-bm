@@ -32,7 +32,7 @@
 #include "proc.h"
 #include "elf.h"
 
-__thread struct cpu *cpu;
+//__thread struct cpu *cpu;
 __thread struct proc *proc;
 
 static pde_t *kpml4;
@@ -102,7 +102,7 @@ seginit(void)
   c = &cpus[cpunum()];
   c->local = local;
 
-  cpu = c;
+  //mycpu() = c;
   proc = 0;
 
   addr = (uint64) tss;
@@ -198,7 +198,7 @@ switchuvm(struct proc *p)
   pushcli();
   if(p->pgdir == 0)
     panic("switchuvm: no pgdir");
-  tss = (uint*) (((char*) cpu->local) + 1024);
+  tss = (uint*) (((char*) (mycpu()->local)) + 1024);
   tss_set_rsp(tss, 0, (uintp)proc->kstack + KSTACKSIZE);
   pml4 = (void*) PTE_ADDR(p->pgdir[511]);
   lcr3(v2p(pml4));

@@ -30,13 +30,13 @@ seginit(void)
   c->gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
 
   // Map cpu, and curproc
-  c->gdt[SEG_KCPU] = SEG(STA_W, &c->cpu, 8, 0);
+  c->gdt[SEG_KCPU] = SEG(STA_W, &mycpu(), 8, 0);
 
   lgdt(c->gdt, sizeof(c->gdt));
   loadgs(SEG_KCPU << 3);
   
   // Initialize cpu-local storage.
-  cpu = c;
+  //mycpu() = c;
   proc = 0;
 }
 #endif
@@ -168,10 +168,10 @@ void
 switchuvm(struct proc *p)
 {
   pushcli();
-  cpu->gdt[SEG_TSS] = SEG16(STS_T32A, &cpu->ts, sizeof(cpu->ts)-1, 0);
-  cpu->gdt[SEG_TSS].s = 0;
-  cpu->ts.ss0 = SEG_KDATA << 3;
-  cpu->ts.esp0 = (uintp)proc->kstack + KSTACKSIZE;
+  mycpu()->gdt[SEG_TSS] = SEG16(STS_T32A, &(mycpu()->ts), sizeof(mycpu()->ts)-1, 0);
+  mycpu()->gdt[SEG_TSS].s = 0;
+  mycpu()->ts.ss0 = SEG_KDATA << 3;
+  mycpu()->ts.esp0 = (uintp)proc->kstack + KSTACKSIZE;
   ltr(SEG_TSS << 3);
   if(p->pgdir == 0)
     panic("switchuvm: no pgdir");
