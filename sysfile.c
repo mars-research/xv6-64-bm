@@ -24,7 +24,7 @@ argfd(int n, int *pfd, struct file **pf)
 
   if(argint(n, &fd) < 0)
     return -1;
-  if(fd < 0 || fd >= NOFILE || (f=proc->ofile[fd]) == 0)
+  if(fd < 0 || fd >= NOFILE || (f=myproc()->ofile[fd]) == 0)
     return -1;
   if(pfd)
     *pfd = fd;
@@ -39,10 +39,11 @@ static int
 fdalloc(struct file *f)
 {
   int fd;
+  struct proc* curproc = myproc();
 
   for(fd = 0; fd < NOFILE; fd++){
-    if(proc->ofile[fd] == 0){
-      proc->ofile[fd] = f;
+    if(curproc->ofile[fd] == 0){
+      curproc->ofile[fd] = f;
       return fd;
     }
   }
@@ -95,7 +96,7 @@ sys_close(void)
   
   if(argfd(0, &fd, &f) < 0)
     return -1;
-  proc->ofile[fd] = 0;
+  myproc()->ofile[fd] = 0;
   fileclose(f);
   return 0;
 }
@@ -360,6 +361,7 @@ sys_chdir(void)
 {
   char *path;
   struct inode *ip;
+  struct proc* curproc = myproc();
 
   if(argstr(0, &path) < 0 || (ip = namei(path)) == 0)
     return -1;
@@ -369,8 +371,8 @@ sys_chdir(void)
     return -1;
   }
   iunlock(ip);
-  iput(proc->cwd);
-  proc->cwd = ip;
+  iput(curproc->cwd);
+  curproc->cwd = ip;
   return 0;
 }
 
@@ -414,7 +416,7 @@ sys_pipe(void)
   fd0 = -1;
   if((fd0 = fdalloc(rf)) < 0 || (fd1 = fdalloc(wf)) < 0){
     if(fd0 >= 0)
-      proc->ofile[fd0] = 0;
+      myproc()->ofile[fd0] = 0;
     fileclose(rf);
     fileclose(wf);
     return -1;

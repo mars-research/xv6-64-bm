@@ -118,13 +118,13 @@ void dump_kernel(struct trapframe *tf) {
 
   dump_state(tf); 
 
-  if (proc)
+  if (mycpu()->proc)
     cprintf("current process, id: %d, name:%s\n", 
-          proc->pid, proc->name);
+          mycpu()->proc->pid, mycpu()->proc->name);
   else 
     cprintf("current process is NULL\n"); 
 
-  if (proc && proc->tf != tf)
+  if (mycpu()->proc && mycpu()->proc->tf != tf)
     dump(); 
 
   /* Inside the trap function, tf is on top of the stack */
@@ -133,24 +133,24 @@ void dump_kernel(struct trapframe *tf) {
 };
 
 void dump() {
-  if (!proc) {
+  if (!mycpu()->proc) {
      cprintf("current process is NULL\n");
      return;
   }
 
   cprintf("state of the current process, id: %d, name:%s\n", 
-          proc->pid, proc->name);
+          mycpu()->proc->pid, mycpu()->proc->name);
 
-  dump_state(proc->tf); 
+  dump_state(mycpu()->proc->tf); 
   return;
 };
 
 void sys_oops() {
   pushcli(); 
   cprintf("\nuser oops, pid:%d, name:%s\n", 
-    proc->pid, proc->name);
-  dump_state(proc->tf);
-  dump_stack_addr(proc->tf->esp); 
+    mycpu()->proc->pid, mycpu()->proc->name);
+  dump_state(mycpu()->proc->tf);
+  dump_stack_addr(mycpu()->proc->tf->esp); 
   popcli();
 };
 
@@ -159,11 +159,11 @@ void
 trap(struct trapframe *tf)
 {
   if(tf->trapno == T_SYSCALL){
-    if(proc->killed)
+    if(myproc()->killed)
       exit();
-    proc->tf = tf;
+    myproc()->tf = tf;
     syscall();
-    if(proc->killed)
+    if(myproc()->killed)
       exit();
     return;
   }
@@ -202,7 +202,7 @@ trap(struct trapframe *tf)
    
   //PAGEBREAK: 13
   default:
-    if(proc == 0 || (tf->cs&3) == 0){
+    if(myproc() == 0 || (tf->cs&3) == 0){
       // In kernel, it must be our mistake.
       cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
               tf->trapno, mycpu()->id, tf->eip, rcr2());
@@ -213,7 +213,7 @@ trap(struct trapframe *tf)
     // In user space, assume process misbehaved.
     cprintf("pid %d %s: trap %d err %d on cpu %d "
             "eip 0x%x addr 0x%x--kill proc\n",
-            proc->pid, proc->name, tf->trapno, tf->err, mycpu()->id, tf->eip, 
+            myproc()->pid, myproc()->name, tf->trapno, tf->err, mycpu()->id, tf->eip, 
             rcr2());
 
     dump_state(tf);
@@ -221,21 +221,21 @@ trap(struct trapframe *tf)
     dump_stack_addr(tf->esp);
 //    dump_pgdir(myproc()->pgdir, 0, KERNBASE);  
 
-    proc->killed = 1;
+    myproc()->killed = 1;
   }
 
   // Force process exit if it has been killed and is in user space.
   // (If it is still executing in the kernel, let it keep running 
   // until it gets to the regular system call return.)
-  if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+  if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
+  if(myproc() && myproc()->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();
 
   // Check if the process has been killed since we yielded
-  if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+  if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
 }

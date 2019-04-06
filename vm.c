@@ -37,7 +37,7 @@ seginit(void)
   
   // Initialize cpu-local storage.
   //mycpu() = c;
-  proc = 0;
+  //proc = 0;
 }
 #endif
 
@@ -171,7 +171,7 @@ switchuvm(struct proc *p)
   mycpu()->gdt[SEG_TSS] = SEG16(STS_T32A, &(mycpu()->ts), sizeof(mycpu()->ts)-1, 0);
   mycpu()->gdt[SEG_TSS].s = 0;
   mycpu()->ts.ss0 = SEG_KDATA << 3;
-  mycpu()->ts.esp0 = (uintp)proc->kstack + KSTACKSIZE;
+  mycpu()->ts.esp0 = (uintp)p->kstack + KSTACKSIZE;
   ltr(SEG_TSS << 3);
   if(p->pgdir == 0)
     panic("switchuvm: no pgdir");
