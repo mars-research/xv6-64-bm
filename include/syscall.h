@@ -27,3 +27,4 @@
 #define SYS_cr3_kernel 26
 #define SYS_null_call 27
 #define SYS_set_size 28
+#define SYS_touch_pages 29

@@ -26,6 +26,7 @@ int send(int,  struct msg*);
 int recv(int,  struct msg*);
 int send_recv(int, struct msg*);
 int sys_set_size(void);
+int touch_pages(void);
 // ulib.c
 int stat(char*, struct stat*);
 char* strcpy(char*, char*);

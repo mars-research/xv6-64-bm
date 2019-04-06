@@ -237,6 +237,49 @@ sys_cr3_reload(void)
   return 1;
 }
 int
+touch_pages_test(void){
+  cprintf("touching pages\n");
+  struct proc *p = proc;
+  unsigned long long  start, end, total;
+  int sum;
+  void * pml4;
+  
+  pml4 = (void*)PTE_ADDR(p->pgdir[511]);
+
+  for(int num_pages = 0; num_pages < 128; num_pages++){
+    cprintf("touch %d pages:", num_pages);
+    total = 0;
+    for(unsigned long long i = 0; i < ITERS; i++){
+      sum = 0;
+      char *a = (char *)KERNLINK;
+#ifdef PCID
+      if(unlikely(proc->pcid + NPCIDS < pcid_counter)){
+        proc->pcid = pcid_counter;
+        pcid_counter++;
+
+        lcr3(CR3_ENTRY_INVALIDATE((proc->pcid % NPCIDS + 1), v2p(pml4)));
+      }
+      else{
+        lcr3(CR3_ENTRY_PRESERVE((proc->pcid % NPCIDS + 1), v2p(pml4)));
+      }
+#else
+      lcr3(v2p(pml4));
+#endif
+      start = rdtsc();
+      for(unsigned long long j = 0; j < num_pages; j++){
+        sum += *(int *)a;
+        a += PGSIZE;
+      }
+      end = rdtsc();
+      total += end - start;
+
+    }
+    cprintf("overhead of touch_pages across %d runs: average cycles %d\n",
+          ITERS, (unsigned long)(total)/ITERS);
+  }
+  return 0;
+}
+int
 sys_cr3_kernel(unsigned long long num)
 {
 
@@ -270,6 +313,7 @@ void * syscalls_fast[] = {
   [SYS_send]        send,
   [SYS_send_recv]   send_recv,
   [SYS_recv]        recv,
+  [SYS_touch_pages] touch_pages_test,
 };
 
 void

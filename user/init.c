@@ -28,7 +28,7 @@ main(void)
   dup(0);  // stdout
   dup(0);  // stderr
 
-  for(int i = 0; i < 10; i++){
+  for(int i = 0; i < 5; i++){
     pid = fork();
     if(pid == 0){
       struct msg m;
@@ -59,39 +59,31 @@ main(void)
       null_call_time /= ITERS;
       printf(1, "null_call time - %d\n",null_call_time);
 
-      unsigned long long cr3_kernel_time = rdtsc();
+      unsigned long long start, end , total = 0;
+      for(unsigned long long i = 0; i < ITERS; i++){
+        start = rdtsc();
+        null_call();
+        end = rdtsc();
+        total += end - start;
+      }
+      printf(1, "average null_call tiime - %d\n", total/ITERS);
+
+      /*unsigned long long cr3_kernel_time = rdtsc();
       cr3_kernel(ITERS);
       cr3_kernel_time = rdtsc() - cr3_kernel_time;
       cr3_kernel_time /= ITERS;
-      printf(1, "cr3_kernel time - %d\n",cr3_kernel_time);
+      printf(1, "cr3_kernel time - %d\n",cr3_kernel_time);*/
+      
+      touch_pages();
 
       cr3_test();
 
-      //printf(1, "ipc/reload time delta - %d\n",ipc_time - reload_time);
-      //printf(1, "ipc/sum of parts delta - %d\n", ipc_time - (2*(reload_time-null_call_time) + 2*null_call_time));
-
-
-      /*for(int i = 0; i < 128; i++){
-        set_size(i);
-        printf(1, "touch %d pages:", i);
-
-        unsigned long long start, end;
-        start = rdtsc();
-        for(unsigned long long i = 0; i < ITERS; i++){
-          cr3_test();
-        }
-        //printf(1, "after test loop\n");
-        end = rdtsc();
-
-        printf(1, "overhead of cr3_reload across %d runs: average cycles %d\n",
-              ITERS, (unsigned long)(end-start)/ITERS);
-      }*/
-
+      printf(1, "\n");
       wait();
       //exit();
     }
   
-    printf(1, "uptime - %d\n", send(0, 90));
+    //printf(1, "uptime - %d\n", send(0, 90));
   }
   for(;;){
     printf(1, "init: starting sh\n");
