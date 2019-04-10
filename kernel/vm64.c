@@ -146,9 +146,9 @@ setupkvm(void)
   memset(pml4, 0, PGSIZE);
   memset(pdpt, 0, PGSIZE);
   memset(pgdir, 0, PGSIZE);
-  pml4[511] = v2p(kpdpt) | PTE_P | PTE_W | PTE_U;
-  pml4[0] = v2p(pdpt) | PTE_P | PTE_W | PTE_U;
-  pdpt[0] = v2p(pgdir) | PTE_P | PTE_W | PTE_U; 
+  pml4[511] = v2p(kpdpt) | PTE_P | PTE_W | PTE_U | PTE_G;
+  pml4[0] = v2p(pdpt) | PTE_P | PTE_W | PTE_U | PTE_G;
+  pdpt[0] = v2p(pgdir) | PTE_P | PTE_W | PTE_U | PTE_G; 
 
   // virtual backpointers
   pgdir[511] = ((uintp) pml4) | PTE_P;
@@ -173,16 +173,16 @@ kvmalloc(void)
   memset(kpml4, 0, PGSIZE);
   memset(kpdpt, 0, PGSIZE);
   memset(iopgdir, 0, PGSIZE);
-  kpml4[511] = v2p(kpdpt) | PTE_P | PTE_W;
-  kpdpt[511] = v2p(kpgdir1) | PTE_P | PTE_W;
-  kpdpt[510] = v2p(kpgdir0) | PTE_P | PTE_W;
-  kpdpt[509] = v2p(iopgdir) | PTE_P | PTE_W;
+  kpml4[511] = v2p(kpdpt) | PTE_P | PTE_W | PTE_G;
+  kpdpt[511] = v2p(kpgdir1) | PTE_P | PTE_W | PTE_G;
+  kpdpt[510] = v2p(kpgdir0) | PTE_P | PTE_W | PTE_G;
+  kpdpt[509] = v2p(iopgdir) | PTE_P | PTE_W | PTE_G;
   for (n = 0; n < NPDENTRIES; n++) {
-    kpgdir0[n] = (n << PDXSHIFT) | PTE_PS | PTE_P | PTE_W;
-    kpgdir1[n] = ((n + 512) << PDXSHIFT) | PTE_PS | PTE_P | PTE_W;
+    kpgdir0[n] = (n << PDXSHIFT) | PTE_PS | PTE_P | PTE_W | PTE_G;
+    kpgdir1[n] = ((n + 512) << PDXSHIFT) | PTE_PS | PTE_P | PTE_W | PTE_G;
   }
   for (n = 0; n < 16; n++)
-    iopgdir[n] = (DEVSPACE + (n << PDXSHIFT)) | PTE_PS | PTE_P | PTE_W | PTE_PWT | PTE_PCD;
+    iopgdir[n] = (DEVSPACE + (n << PDXSHIFT)) | PTE_PS | PTE_P | PTE_W | PTE_PWT | PTE_PCD | PTE_G;
   switchkvm();
 }
 
