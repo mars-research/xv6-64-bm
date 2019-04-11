@@ -20,8 +20,8 @@ main(void)
   uartearlyinit();
   kinit1(end, P2V(4*1024*1024)); // phys page allocator
   kvmalloc();      // kernel page table
-  //if (acpiinit()) // try to use acpi for machine info
-  //  mpinit();      // otherwise use bios MP tables
+  if (acpiinit()) // try to use acpi for machine info
+    mpinit();      // otherwise use bios MP tables
   lapicinit();
   seginit();       // set up segments
   cprintf("\ncpu%d: starting xv6\n\n", cpunum());
@@ -37,9 +37,12 @@ main(void)
   ideinit();       // disk
   if(!ismp)
     timerinit();   // uniprocessor timer
-  //startothers();   // start other processors
+  cprintf("\nbefore start other\n\n");
+  startothers();   // start other processors
+  cprintf("\n started others\n\n");
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();      // first user process
+  cprintf("\n userinit finished\n\n");
   // Finish setting up this processor in mpmain.
   mpmain();
 }
@@ -83,10 +86,13 @@ startothers(void)
   code = p2v(0x7000);
   memmove(code, _binary_entryother_start, (uintp)_binary_entryother_size);
 
+  cprintf("\nin startothers : ncpu = %d\n\n",ncpu);
   for(c = cpus; c < cpus+ncpu; c++){
-    if(c == cpus+cpunum())  // We've started already.
+    if(c == mycpu())  // We've started already.
       continue;
 
+
+    cprintf("\npicked cpu : cpu %d\n\n",c->id);
     // Tell entryother.S what stack to use, where to enter, and what 
     // pgdir to use. We cannot use kpgdir yet, because the AP processor
     // is running in low  memory, so we use entrypgdir for the APs too.
@@ -101,11 +107,13 @@ startothers(void)
     *(int**)(code-12) = (void *) v2p(entrypgdir);
 #endif
 
+    cprintf("\nbefore lapicstartap\n\n");
     lapicstartap(c->apicid, v2p(code));
-
+	cprintf("\nafter lapicstartap\n\n");
     // wait for cpu to finish mpmain()
     while(c->started == 0)
-      ;
+	    cprintf("cpu: %d waiting for mpenter == 1 : %d\n\n", mycpu()-cpus, c->started);
+    cprintf("\nleaving startothers\n\n");
   }
 }
 

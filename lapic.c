@@ -149,7 +149,7 @@ mycpu(void)
     //cprintf("\nncpu = %d\n",ncpu);
 
     // should be < ncpu, scheduler enters an infinite loop if more than 1 cpu are used
-    for(i = 0; i <= ncpu; ++i)
+    for(i = 0; i < ncpu; ++i)
     {
 	//cprintf("\napicid = %d || cpu.apicid = %d %d\n", apicid, cpus[i].apicid, i);
         if(cpus[i].apicid == apicid)
@@ -196,6 +196,8 @@ lapicstartap(uchar apicid, uint addr)
   int i;
   ushort *wrv;
   
+  cprintf("\nbegin lapicstartap\n\n");
+
   // "The BSP must initialize CMOS shutdown code to 0AH
   // and the warm reset vector (DWORD based at 40:67) to point at
   // the AP startup code prior to the [universal startup algorithm]."
@@ -205,6 +207,8 @@ lapicstartap(uchar apicid, uint addr)
   wrv[0] = 0;
   wrv[1] = addr >> 4;
 
+  cprintf("\nbefore universal startup lapicstartap\n\n");
+
   // "Universal startup algorithm."
   // Send INIT (level-triggered) interrupt to reset other CPU.
   lapicw(ICRHI, apicid<<24);
@@ -212,7 +216,9 @@ lapicstartap(uchar apicid, uint addr)
   microdelay(200);
   lapicw(ICRLO, INIT | LEVEL);
   microdelay(100);    // should be 10ms, but too slow in Bochs!
-  
+
+  cprintf("\nmid lapicstartap\n\n");
+
   // Send startup IPI (twice!) to enter code.
   // Regular hardware is supposed to only accept a STARTUP
   // when it is in the halted state due to an INIT.  So the second
@@ -223,6 +229,7 @@ lapicstartap(uchar apicid, uint addr)
     lapicw(ICRLO, STARTUP | (addr>>12));
     microdelay(200);
   }
+  cprintf("\nfinished lapicstartap\n\n");
 }
 
 
