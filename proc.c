@@ -107,8 +107,6 @@ userinit(void)
 
   p->state = RUNNABLE;
 
-  cprintf("userinit cpu: %d proc: %d - state = %d\n",cpunum(),p->pid,p->state);
-
   release(&ptable.lock);
 }
 
@@ -277,7 +275,6 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-	//cprintf("looping in scheduler\n");
     // no runnable processes? (did we hit the end of the table last time?)
     // if so, wait for irq before trying again.
     if (p == &ptable.proc[NPROC])
@@ -285,21 +282,15 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    //cprintf("num procs = %d NPROC = %d\n", &ptable.proc[NPROC] - ptable.proc, NPROC);
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-	    //cprintf("looking at index = %d\n", p - ptable.proc);
-	    //cprintf("cpu: %d proc: %d - state = %d\n",cpunum(),p->pid,p->state);
       if(p->state != RUNNABLE)
-      {
-	      //cprintf("looking for proc to pick\n");
 	      continue;
-      }
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       c->proc = p;
-      cprintf("cpu: %d proc: %d - state = %d\n", cpunum(),p->pid,p->state);
       switchuvm(p);
       p->state = RUNNING;
       swtch(&(c->scheduler), p->context);
@@ -307,7 +298,6 @@ scheduler(void)
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
-      //cprintf("cpu: %d proc: %d - state = %d\n",cpunum(), p->pid, p->state);
       c->proc = 0;
     }
     release(&ptable.lock);
