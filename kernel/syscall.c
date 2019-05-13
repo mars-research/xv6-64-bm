@@ -183,6 +183,8 @@ sys_cr3_reload(void)
   struct proc *p = proc;
   unsigned long long  start, end, total;
   int sum;
+  int num_pages;
+  unsigned long long i, j;
 
   void * pml4;
   
@@ -202,13 +204,13 @@ sys_cr3_reload(void)
   lcr3(v2p(pml4));
 #endif
 
-  for(int num_pages = 0; num_pages < 128; num_pages++){
+  for(num_pages = 0; num_pages < 128; num_pages++){
     cprintf("touch %d pages:", num_pages);
     total = 0;
-    for(unsigned long long i = 0; i < ITERS; i++){
+    for(i = 0; i < ITERS; i++){
       sum = 0;
       char *a = (char *)KERNLINK;
-      for(unsigned long long j = 0; j < num_pages; j++){
+      for(j = 0; j < num_pages; j++){
         sum += *(int *)a;
         a += PGSIZE;
       }
@@ -243,13 +245,15 @@ touch_pages_test(void){
   unsigned long long  start, end, total;
   int sum;
   void * pml4;
+  int num_pages; 
+  unsigned long long i, j; 
   
   pml4 = (void*)PTE_ADDR(p->pgdir[511]);
 
-  for(int num_pages = 0; num_pages < 128; num_pages++){
+  for(num_pages = 0; num_pages < 128; num_pages++){
     cprintf("touch %d pages:", num_pages);
     total = 0;
-    for(unsigned long long i = 0; i < ITERS; i++){
+    for(i = 0; i < ITERS; i++){
       sum = 0;
       char *a = (char *)KERNLINK;
 #ifdef PCID
@@ -266,7 +270,7 @@ touch_pages_test(void){
       lcr3(v2p(pml4));
 #endif
       start = rdtsc();
-      for(unsigned long long j = 0; j < num_pages; j++){
+      for(j = 0; j < num_pages; j++){
         sum += *(int *)a;
         a += PGSIZE;
       }
@@ -282,8 +286,8 @@ touch_pages_test(void){
 int
 sys_cr3_kernel(unsigned long long num)
 {
-
-  for(unsigned long long i = 0; i<num; i++){
+  unsigned long long i; 
+  for(i = 0; i<num; i++){
     void * pml4 = (void*)PTE_ADDR(proc->pgdir[511]);
 #ifdef PCID
     if(unlikely(proc->pcid + NPCIDS < pcid_counter)){

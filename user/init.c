@@ -18,7 +18,7 @@ __attribute((always_inline)) unsigned long long rdtsc(){
 int
 main(void)
 {
-  int pid, wpid;
+  int pid, wpid, i, j;
   
   if(open("console", O_RDWR) < 0){
     mknod("console", 1, 1);
@@ -28,12 +28,12 @@ main(void)
   dup(0);  // stdout
   dup(0);  // stderr
 
-  for(int i = 0; i < 5; i++){
+  for(i = 0; i < 5; i++){
     pid = fork();
     if(pid == 0){
       struct msg m;
       recv(0,&m);
-      for(unsigned long long i = 0; i<ITERS-1ul; i++){
+      for(j = 0; j<ITERS-1ul; j++){
         send_recv(0, &m);
       }
       send(0, &m);
@@ -44,7 +44,7 @@ main(void)
       sleep(100);
 
       unsigned long long ipc_time = rdtsc();
-      for(unsigned long long i = 0; i<ITERS; i++){
+      for(j = 0; j<ITERS; j++){
         send_recv(0, &m);
       }
       ipc_time = rdtsc() - ipc_time;
@@ -52,7 +52,7 @@ main(void)
       printf(1, "ipc time - %d\n",ipc_time);
 
       unsigned long long null_call_time = rdtsc();
-      for(unsigned long long i = 0; i<ITERS; i++){
+      for(j = 0; j<ITERS; j++){
         null_call();
       }
       null_call_time = rdtsc() - null_call_time;
@@ -60,7 +60,7 @@ main(void)
       printf(1, "null_call time - %d\n",null_call_time);
 
       unsigned long long start, end , total = 0;
-      for(unsigned long long i = 0; i < ITERS; i++){
+      for(j = 0; j < ITERS; j++){
         start = rdtsc();
         null_call();
         end = rdtsc();

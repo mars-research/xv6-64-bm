@@ -499,11 +499,12 @@ int sysenter_dispatch_test(/* PARAMS? */){
   char *a = (char *)KERNLINK;
   int sum;
   void *pml4;
+  int i;
 
   pml4 = (void*)PTE_ADDR(p->pgdir[511]);
   lcr3(v2p(pml4));
 
-  for(int i = 0; i < num_pages; i++){
+  for(i = 0; i < num_pages; i++){
     sum += *(int *)a;
     a += PGSIZE;
   }
